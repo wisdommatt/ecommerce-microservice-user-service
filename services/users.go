@@ -2,24 +2,44 @@ package services
 
 import (
 	"context"
+	"errors"
+	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
+	"github.com/wisdommatt/ecommerce-microservice-user-service/mappers"
+	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
 )
 
 type UserService struct {
 	proto.UnimplementedUserServiceServer
-	userRepo users.Repository
+	userService users.Service
 }
 
 // NewUserService returns a new user service.
-func NewUserService(userRepo users.Repository) *UserService {
+func NewUserService(userService users.Service) *UserService {
 	return &UserService{
-		userRepo: userRepo,
+		userService: userService,
 	}
 }
 
-// CreateUser is the rpc handler create
+// CreateUser is the rpc handler to create new user.
 func (u *UserService) CreateUser(ctx context.Context, req *proto.NewUser) (res *proto.User, err error) {
-	return res, err
+	globalTracer := opentracing.GlobalTracer()
+	span := globalTracer.StartSpan("create-user")
+	defer span.Finish()
+	defer panick.RecoverFromPanic(opentracing.ContextWithSpan(ctx, span))
+	ext.SpanKindRPCServer.Set(span)
+	span.SetTag("time", time.Now())
+	span.LogFields(log.Object("request.body", req))
+
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	newUser, err := u.userService.CreateUser(ctx, mappers.ProtoNewUserToInternalUser(req))
+	if err != nil {
+		return nil, errors.New("An error occured, please try again later !")
+	}
+	return mappers.InternalToProtoUser(newUser), nil
 }

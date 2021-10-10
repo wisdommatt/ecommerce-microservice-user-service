@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"io"
-	"log"
 	"net"
 	"os"
 	"time"
@@ -11,10 +9,10 @@ import (
 	"github.com/joho/godotenv"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
-	"github.com/uber/jaeger-client-go"
-	"github.com/uber/jaeger-client-go/config"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
+	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
+	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/tracer"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -23,15 +21,19 @@ import (
 
 func main() {
 	log := logrus.New()
-	log.SetFormatter(&logrus.JSONFormatter{})
+	log.SetFormatter(&logrus.JSONFormatter{
+		PrettyPrint: true,
+	})
 	log.SetReportCaller(true)
 	log.SetOutput(os.Stdout)
 
 	mustLoadDotenv(log)
 
-	serviceTracer, closer := initJaeger("user-service", log)
-	defer closer.Close()
+	serviceTracer := tracer.Init("user-service")
 	opentracing.SetGlobalTracer(serviceTracer)
+	panicSpan := serviceTracer.StartSpan("user-service-panic")
+	defer panicSpan.Finish()
+	defer panick.RecoverFromPanic(opentracing.ContextWithSpan(context.Background(), panicSpan))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -41,21 +43,22 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("TCP conn error")
 	}
-	mongoDBClient := mustConnectMongoDB()
+	mongoDBClient := mustConnectMongoDB(log)
 	userRepository := users.NewRepository(mongoDBClient)
+	userService := users.NewService(userRepository)
 
 	grpcServer := grpc.NewServer()
-	proto.RegisterUserServiceServer(grpcServer, services.NewUserService(userRepository))
+	proto.RegisterUserServiceServer(grpcServer, services.NewUserService(userService))
 	log.Info("Server running on port: ", port)
 	grpcServer.Serve(lis)
 }
 
-func mustConnectMongoDB() *mongo.Database {
+func mustConnectMongoDB(log *logrus.Logger) *mongo.Database {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGODB_URI")))
 	if err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal("Unable to connect to mongodb")
 	}
 	return client.Database(os.Getenv("MONGODB_DATABASE_NAME"))
 }
@@ -65,22 +68,4 @@ func mustLoadDotenv(log *logrus.Logger) {
 	if err != nil {
 		log.WithError(err).Fatal("Unable to load env files")
 	}
-}
-
-func initJaeger(service string, log *logrus.Logger) (opentracing.Tracer, io.Closer) {
-	cfg := &config.Configuration{
-		ServiceName: service,
-		Sampler: &config.SamplerConfig{
-			Type:  "const",
-			Param: 1,
-		},
-		Reporter: &config.ReporterConfig{
-			LogSpans: true,
-		},
-	}
-	tracer, closer, err := cfg.NewTracer(config.Logger(jaeger.StdLogger))
-	if err != nil {
-		log.WithError(err).Fatal("ERROR: cannot init Jaeger")
-	}
-	return tracer, closer
 }
