@@ -9,18 +9,18 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/mappers"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
+	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 )
 
 type UserServiceServer struct {
 	proto.UnimplementedUserServiceServer
-	userService users.Service
+	userService services.UserService
 }
 
 // NewUserService returns a new user service.
-func NewUserService(userService users.Service) *UserServiceServer {
+func NewUserService(userService services.UserService) *UserServiceServer {
 	return &UserServiceServer{
 		userService: userService,
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/tracer"
+	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
@@ -45,7 +46,7 @@ func main() {
 	}
 	mongoDBClient := mustConnectMongoDB(log)
 	userRepository := users.NewRepository(mongoDBClient)
-	userService := users.NewService(userRepository)
+	userService := services.NewUserService(userRepository)
 
 	grpcServer := grpc.NewServer()
 	proto.RegisterUserServiceServer(grpcServer, servers.NewUserService(userService))
