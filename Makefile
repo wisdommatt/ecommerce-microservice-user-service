@@ -4,5 +4,5 @@ protoc:
 run:
 	go run server/main.go
 
-run-test:
+tests:
 	go test ./... -race -cover
