@@ -1,4 +1,4 @@
-package services
+package servers
 
 import (
 	"context"
@@ -14,20 +14,20 @@ import (
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
 )
 
-type UserService struct {
+type UserServiceServer struct {
 	proto.UnimplementedUserServiceServer
 	userService users.Service
 }
 
 // NewUserService returns a new user service.
-func NewUserService(userService users.Service) *UserService {
-	return &UserService{
+func NewUserService(userService users.Service) *UserServiceServer {
+	return &UserServiceServer{
 		userService: userService,
 	}
 }
 
 // CreateUser is the rpc handler to create new user.
-func (u *UserService) CreateUser(ctx context.Context, req *proto.NewUser) (res *proto.User, err error) {
+func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) (res *proto.User, err error) {
 	globalTracer := opentracing.GlobalTracer()
 	span := globalTracer.StartSpan("create-user")
 	defer span.Finish()

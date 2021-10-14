@@ -10,10 +10,10 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
+	servers "github.com/wisdommatt/ecommerce-microservice-user-service/grpc/service-servers"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/tracer"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
@@ -48,7 +48,7 @@ func main() {
 	userService := users.NewService(userRepository)
 
 	grpcServer := grpc.NewServer()
-	proto.RegisterUserServiceServer(grpcServer, services.NewUserService(userService))
+	proto.RegisterUserServiceServer(grpcServer, servers.NewUserService(userService))
 	log.Info("Server running on port: ", port)
 	grpcServer.Serve(lis)
 }
