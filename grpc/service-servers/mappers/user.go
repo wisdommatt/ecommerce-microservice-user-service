@@ -19,5 +19,6 @@ func ProtoNewUserToInternalUser(usr *proto.NewUser) *users.User {
 		FullName: usr.FullName,
 		Email:    usr.Email,
 		Country:  usr.Country,
+		Password: usr.Password,
 	}
 }
