@@ -105,6 +105,14 @@ func TestUserServiceServer_GetUsers(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "GetUsers service implementation with empty reponse",
+			filter: &proto.GetUsersFilter{},
+			serviceGetUsersFunc: func(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
+				return nil, nil
+			},
+			want: &proto.GetUsersResponse{Users: nil},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
