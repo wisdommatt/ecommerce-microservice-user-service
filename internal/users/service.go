@@ -2,7 +2,6 @@ package users
 
 import (
 	"context"
-	"time"
 
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/password"
 	"golang.org/x/crypto/bcrypt"
@@ -30,8 +29,6 @@ func (s *UserService) CreateUser(ctx context.Context, newUser *User) (*User, err
 	if err != nil {
 		return nil, err
 	}
-	newUser.TimeAdded = time.Now()
-	newUser.LastUpdated = time.Now()
 	err = s.userRepo.CreateUser(ctx, newUser)
 	if err != nil {
 		return nil, err

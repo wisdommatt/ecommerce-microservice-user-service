@@ -34,6 +34,8 @@ func NewRepository(db *mongo.Database) *UserRepo {
 // CreateUser adds a new user to the database.
 func (r *UserRepo) CreateUser(ctx context.Context, newUser *User) error {
 	newUser.ID = primitive.NewObjectID().Hex()
+	newUser.TimeAdded = time.Now()
+	newUser.LastUpdated = time.Now()
 	span := r.tracer.StartSpan("CreateUser", opentracing.ChildOf(opentracing.SpanFromContext(ctx).Context()))
 	defer span.Finish()
 	defer panick.RecoverFromPanic(opentracing.ContextWithSpan(ctx, span))

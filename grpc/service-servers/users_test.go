@@ -8,11 +8,10 @@ import (
 
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
-	userMocks "github.com/wisdommatt/ecommerce-microservice-user-service/test/mocks/users"
 )
 
 func TestUserServiceServer_CreateUser(t *testing.T) {
-	userServiceMock := &userMocks.ServiceMock{}
+	userServiceMock := &users.ServiceMock{}
 	tests := []struct {
 		name                  string
 		req                   *proto.NewUser

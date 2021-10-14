@@ -26,7 +26,7 @@ func NewUserService(userService users.Service) *UserServiceServer {
 	}
 }
 
-// CreateUser is the rpc handler to create new user.
+// CreateUser is the grpc handler to create new user.
 func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) (res *proto.User, err error) {
 	globalTracer := opentracing.GlobalTracer()
 	span := globalTracer.StartSpan("create-user")
