@@ -19,8 +19,8 @@ type UserServiceServer struct {
 	userService services.UserService
 }
 
-// NewUserService returns a new user service.
-func NewUserService(userService services.UserService) *UserServiceServer {
+// NewUserServiceServer returns a new user service.
+func NewUserServiceServer(userService services.UserService) *UserServiceServer {
 	return &UserServiceServer{
 		userService: userService,
 	}
@@ -28,8 +28,7 @@ func NewUserService(userService services.UserService) *UserServiceServer {
 
 // CreateUser is the grpc handler to create new user.
 func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) (res *proto.User, err error) {
-	globalTracer := opentracing.GlobalTracer()
-	span := globalTracer.StartSpan("create-user")
+	span := opentracing.GlobalTracer().StartSpan("CreateUser")
 	defer span.Finish()
 	defer panick.RecoverFromPanic(opentracing.ContextWithSpan(ctx, span))
 	ext.SpanKindRPCServer.Set(span)
@@ -39,7 +38,29 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) 
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	newUser, err := u.userService.CreateUser(ctx, mappers.ProtoNewUserToInternalUser(req))
 	if err != nil {
-		return nil, errors.New("An error occured, please try again later !")
+		return nil, errors.New("an error occured, please try again later")
 	}
 	return mappers.InternalToProtoUser(newUser), nil
+}
+
+func (u *UserServiceServer) GetUsers(ctx context.Context, filter *proto.GetUsersFilter) (*proto.GetUsersResponse, error) {
+	span := opentracing.GlobalTracer().StartSpan("GetUsers")
+	defer span.Finish()
+	defer panick.RecoverFromPanic(opentracing.ContextWithSpan(ctx, span))
+	ext.SpanKindRPCServer.Set(span)
+	span.SetTag("time", time.Now())
+	span.SetTag("param.filter", filter)
+
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	users, err := u.userService.GetUsers(ctx, filter.AfterId, filter.Limit)
+	if err != nil {
+		return nil, err
+	}
+	var protoUsers []*proto.User
+	for _, user := range users {
+		protoUsers = append(protoUsers, mappers.InternalToProtoUser(&user))
+	}
+	return &proto.GetUsersResponse{
+		Users: protoUsers,
+	}, nil
 }

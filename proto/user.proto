@@ -16,6 +16,16 @@ message User {
     string country = 4;
 }
 
+message GetUsersFilter {
+    string afterId = 1;
+    int32 limit = 2;
+}
+
+message GetUsersResponse {
+    repeated User users = 1;
+}
+
 service UserService {
     rpc CreateUser (NewUser) returns (User);
+    rpc GetUsers (GetUsersFilter) returns (GetUsersResponse);
 }
