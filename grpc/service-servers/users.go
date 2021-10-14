@@ -9,7 +9,7 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/mappers"
+	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/service-servers/mappers"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 )
