@@ -49,7 +49,7 @@ func main() {
 	userService := services.NewUserService(userRepository)
 
 	grpcServer := grpc.NewServer()
-	proto.RegisterUserServiceServer(grpcServer, servers.NewUserService(userService))
+	proto.RegisterUserServiceServer(grpcServer, servers.NewUserServiceServer(userService))
 	log.Info("Server running on port: ", port)
 	grpcServer.Serve(lis)
 }

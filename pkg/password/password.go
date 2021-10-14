@@ -3,7 +3,6 @@ package password
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -16,7 +15,6 @@ func HashPassword(ctx context.Context, passwordStr string, cost int) (string, er
 	defer span.Finish()
 	ext.Component.Set(span, "bcrypt")
 	span.SetTag("param.cost", cost)
-	span.SetTag("time", time.Now())
 
 	if passwordStr == "" {
 		ext.Error.Set(span, true)
@@ -25,7 +23,7 @@ func HashPassword(ctx context.Context, passwordStr string, cost int) (string, er
 			log.String("event", "password hash error"),
 			log.String("message", "password is empty"),
 		)
-		return "", errors.New("Password must not be empty !")
+		return "", errors.New("password must not be empty")
 	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(passwordStr), cost)
 	if err != nil {

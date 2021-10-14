@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
@@ -68,6 +69,66 @@ func TestUserService_CreateUser(t *testing.T) {
 			if tt.wantErr == false && (tt.want.ID != got.ID || tt.want.FullName != got.FullName || tt.want.Email != got.Email) {
 				t.Errorf("UserServiceServer.CreateUser() = %v, want %v", got, tt.want)
 				return
+			}
+		})
+	}
+}
+
+func TestUserServiceImpl_GetUsers(t *testing.T) {
+	userRepoMock := &userMocks.RepositoryMock{}
+	type args struct {
+		afterId string
+		limit   int32
+	}
+	tests := []struct {
+		name             string
+		args             args
+		repoGetUsersFunc func(ctx context.Context, afterId string, limit int32) ([]users.User, error)
+		want             []users.User
+		wantErr          bool
+	}{
+		{
+			name:    "no pagination limit",
+			args:    args{},
+			wantErr: true,
+		},
+		{
+			name:    "pagination > 100",
+			args:    args{limit: 101},
+			wantErr: true,
+		},
+		{
+			name: "GetUsers repo implementation with error",
+			args: args{limit: 100},
+			repoGetUsersFunc: func(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
+				return nil, errors.New("DB connection error !")
+			},
+			wantErr: true,
+		},
+		{
+			name: "testcase with no expected error",
+			args: args{limit: 10},
+			repoGetUsersFunc: func(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
+				return []users.User{
+					{FullName: "John"}, {FullName: "Jane"}, {FullName: "Doe"},
+				}, nil
+			},
+			want: []users.User{
+				{FullName: "John"}, {FullName: "Jane"}, {FullName: "Doe"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userRepoMock.GetUsersFunc = tt.repoGetUsersFunc
+			s := NewUserService(userRepoMock)
+			got, err := s.GetUsers(context.Background(), tt.args.afterId, tt.args.limit)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UserServiceImpl.GetUsers() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UserServiceImpl.GetUsers() = %v, want %v", got, tt.want)
 			}
 		})
 	}
