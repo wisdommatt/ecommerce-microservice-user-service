@@ -73,12 +73,14 @@ func TestProtoNewUserToInternalUser(t *testing.T) {
 					FullName: "Wisdom Matt",
 					Email:    "hello@example.com",
 					Country:  "Nigeria",
+					Password: "123456",
 				},
 			},
 			want: &users.User{
 				FullName: "Wisdom Matt",
 				Email:    "hello@example.com",
 				Country:  "Nigeria",
+				Password: "123456",
 			},
 		},
 		{
