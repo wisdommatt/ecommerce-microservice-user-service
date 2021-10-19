@@ -3,5 +3,6 @@ package services
 import "errors"
 
 var (
-	errPaginationLimit = errors.New("pagination limit max is 100")
+	ErrPaginationLimit = errors.New("pagination limit max is 100")
+	ErrTryAgain        = errors.New("an error occured, please try again later")
 )

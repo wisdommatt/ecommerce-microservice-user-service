@@ -6,6 +6,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/conversions"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/tracer"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,6 +18,7 @@ import (
 type Repository interface {
 	CreateUser(ctx context.Context, user *User) error
 	GetUsers(ctx context.Context, afterId string, limit int32) ([]User, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
 }
 
 type UserRepo struct {
@@ -78,4 +80,24 @@ func (r *UserRepo) GetUsers(ctx context.Context, afterId string, limit int32) ([
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	span := r.tracer.StartSpan("GetUserByEmail", opentracing.ChildOf(opentracing.SpanFromContext(ctx).Context()))
+	defer span.Finish()
+	tracer.SetMongoDBSpanComponentTags(span, r.collection.Name())
+
+	filter := bson.M{"email": email}
+	span.SetTag("param.email", email).SetTag("mongodb.filter", conversions.ToJSON(span, filter))
+	var user User
+	err := r.collection.FindOne(ctx, filter).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
+	if err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.Error(err), log.Event("mongodb.FindOne"))
+		return nil, err
+	}
+	return &user, nil
 }

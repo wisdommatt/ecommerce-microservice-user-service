@@ -30,14 +30,31 @@ func NewUserService(userRepo users.Repository) *UserServiceImpl {
 
 // CreateUser is the service handler to create new user.
 func (s *UserServiceImpl) CreateUser(ctx context.Context, newUser *users.User) (*users.User, error) {
-	var err error
+	span := opentracing.SpanFromContext(ctx)
+	if span == nil {
+		span = opentracing.StartSpan("service.GetUsers")
+	}
+	existingUser, err := s.userRepo.GetUserByEmail(ctx, newUser.Email)
+	if err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.Error(err), log.Event("existing user email validation"))
+		return nil, ErrTryAgain
+	}
+	if existingUser != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.String("error.object", "user with email already exist"),
+			log.Event("existing user email validation"),
+		)
+		return nil, errors.New("user with this email already exist")
+	}
 	newUser.Password, err = password.HashPassword(ctx, newUser.Password, bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, ErrTryAgain
 	}
 	err = s.userRepo.CreateUser(ctx, newUser)
 	if err != nil {
-		return nil, err
+		return nil, ErrTryAgain
 	}
 	return newUser, nil
 }
@@ -57,13 +74,13 @@ func (s *UserServiceImpl) GetUsers(ctx context.Context, afterId string, limit in
 	if limit > 100 {
 		ext.Error.Set(span, true)
 		span.LogFields(
-			log.Error(errPaginationLimit),
+			log.Error(ErrPaginationLimit),
 		)
-		return nil, errPaginationLimit
+		return nil, ErrPaginationLimit
 	}
 	users, err := s.userRepo.GetUsers(ctx, afterId, limit)
 	if err != nil {
-		return nil, errors.New("an error occured, please try again later")
+		return nil, ErrTryAgain
 	}
 	return users, nil
 }

@@ -2,7 +2,6 @@ package servers
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -38,7 +37,7 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) 
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	newUser, err := u.userService.CreateUser(ctx, mappers.ProtoNewUserToInternalUser(req))
 	if err != nil {
-		return nil, errors.New("an error occured, please try again later")
+		return nil, err
 	}
 	return mappers.InternalToProtoUser(newUser), nil
 }
