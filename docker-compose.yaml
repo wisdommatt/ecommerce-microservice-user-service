@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  app:
+    container_name: user-service-app
+    image: golang:1.17.2-stretch
+    command: ["sh", "-c", "go mod download && go run server/main.go"]
+    ports:
+      - '2020:2020'
+    environment:
+      - PORT=2020
+    working_dir: /app
+    volumes:
+      - ./:/app
+
+  mongodb:
+    container_name: user-service-mongodb
+    image: mongo:5.0.3
+    ports:
+      - '27117:27017'
+    volumes:
+      - /microservice-volumes/user-service/mongodb:/data/db
+
+  jaeger:
+    container_name: users-service-jaeger
+    image: jaegertracing/all-in-one:1.27
+    ports:
+      - '16686:16686'
+      - '6831:6831/udp'
