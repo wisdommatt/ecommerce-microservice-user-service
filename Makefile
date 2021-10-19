@@ -6,3 +6,7 @@ run:
 
 tests:
 	go test ./... -race -cover
+
+watch:
+	go install github.com/cespare/reflex@latest
+	reflex -s -- sh -c 'clear && APP_ENV=dev PORT=2020 go run server/main.go'
