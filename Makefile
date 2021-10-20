@@ -9,4 +9,4 @@ tests:
 
 watch:
 	go install github.com/cespare/reflex@latest
-	reflex -s -- sh -c 'clear && APP_ENV=dev PORT=2020 go run server/main.go'
+	reflex -s -- sh -c 'clear && PORT=2020 go run server/main.go'
