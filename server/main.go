@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/nats-io/nats.go"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
@@ -30,6 +31,13 @@ func main() {
 
 	mustLoadDotenv(log)
 
+	natsConn, err := nats.Connect(os.Getenv("NATS_URI"))
+	if err != nil {
+		log.WithField("nats_uri", os.Getenv("NATS_URI")).WithError(err).
+			Error("an error occured while connecting to nats")
+	}
+	defer natsConn.Close()
+
 	serviceTracer := tracer.Init("user-service")
 	opentracing.SetGlobalTracer(serviceTracer)
 	panicSpan := serviceTracer.StartSpan("user-service-panic")
@@ -46,11 +54,11 @@ func main() {
 	}
 	mongoDBClient := mustConnectMongoDB(log)
 	userRepository := users.NewRepository(mongoDBClient)
-	userService := services.NewUserService(userRepository)
+	userService := services.NewUserService(userRepository, natsConn)
 
 	grpcServer := grpc.NewServer()
 	proto.RegisterUserServiceServer(grpcServer, servers.NewUserServiceServer(userService))
-	log.Info("Server running on port: ", port)
+	log.WithField("nats_uri", os.Getenv("NATS_URI")).Info("Server running on port: ", port)
 	grpcServer.Serve(lis)
 }
 
