@@ -91,7 +91,7 @@ func TestUserService_CreateUser(t *testing.T) {
 			s := NewUserService(&userMocks.RepositoryMock{
 				CreateUserFunc:     tt.repoCreateUserFunc,
 				GetUserByEmailFunc: tt.repoGetUserByEmailFunc,
-			})
+			}, nil)
 			got, err := s.CreateUser(context.Background(), tt.newUser)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserService.CreateUser() error = %v, wantErr %v", err, tt.wantErr)
@@ -152,10 +152,10 @@ func TestUserServiceImpl_GetUsers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userRepoMock.GetUsersFunc = tt.repoGetUsersFunc
-			s := NewUserService(userRepoMock)
+			s := NewUserService(userRepoMock, nil)
 			got, err := s.GetUsers(context.Background(), tt.args.afterId, tt.args.limit)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("UserServiceImpl.GetUsers() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("User, nilServiceImpl.GetUsers() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
