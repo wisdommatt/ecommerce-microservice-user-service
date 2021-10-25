@@ -1,4 +1,4 @@
-package mappers
+package servers
 
 import (
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"

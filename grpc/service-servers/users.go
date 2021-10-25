@@ -8,7 +8,6 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/service-servers/mappers"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 )
 
@@ -33,11 +32,11 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) 
 	span.LogFields(log.Object("request.body", req))
 
 	ctx = opentracing.ContextWithSpan(ctx, span)
-	newUser, err := u.userService.CreateUser(ctx, mappers.ProtoNewUserToInternalUser(req))
+	newUser, err := u.userService.CreateUser(ctx, ProtoNewUserToInternalUser(req))
 	if err != nil {
 		return nil, err
 	}
-	return mappers.InternalToProtoUser(newUser), nil
+	return InternalToProtoUser(newUser), nil
 }
 
 func (u *UserServiceServer) GetUsers(ctx context.Context, filter *proto.GetUsersFilter) (*proto.GetUsersResponse, error) {
@@ -54,7 +53,7 @@ func (u *UserServiceServer) GetUsers(ctx context.Context, filter *proto.GetUsers
 	}
 	var protoUsers []*proto.User
 	for _, user := range users {
-		protoUsers = append(protoUsers, mappers.InternalToProtoUser(&user))
+		protoUsers = append(protoUsers, InternalToProtoUser(&user))
 	}
 	return &proto.GetUsersResponse{
 		Users: protoUsers,
