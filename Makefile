@@ -1,12 +1,12 @@
 protoc:
-	protoc proto/user.proto --go-grpc_out=. --go_out=.
+	protoc user.proto --go-grpc_out=. --go_out=.
 	
 run:
-	go run server/main.go
+	go run main.go
 
 tests:
 	go test ./... -race -cover
 
 watch:
 	go install github.com/cespare/reflex@latest
-	reflex -s -- sh -c 'clear && PORT=2020 go run server/main.go'
+	reflex -s -- sh -c 'clear && PORT=2020 go run main.go'

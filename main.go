@@ -24,9 +24,7 @@ import (
 
 func main() {
 	log := logrus.New()
-	log.SetFormatter(&logrus.JSONFormatter{
-		PrettyPrint: true,
-	})
+	log.SetFormatter(&logrus.JSONFormatter{PrettyPrint: true})
 	log.SetReportCaller(true)
 	log.SetOutput(os.Stdout)
 

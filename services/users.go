@@ -109,9 +109,7 @@ func (s *UserServiceImpl) GetUsers(ctx context.Context, afterId string, limit in
 	}
 	if limit > 100 {
 		ext.Error.Set(span, true)
-		span.LogFields(
-			log.Error(ErrPaginationLimit),
-		)
+		span.LogFields(log.Error(ErrPaginationLimit))
 		return nil, ErrPaginationLimit
 	}
 	users, err := s.userRepo.GetUsers(ctx, afterId, limit)
