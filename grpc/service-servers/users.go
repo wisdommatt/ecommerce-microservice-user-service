@@ -9,7 +9,6 @@ import (
 	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/service-servers/mappers"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 )
 
@@ -29,7 +28,6 @@ func NewUserServiceServer(userService services.UserService) *UserServiceServer {
 func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) (res *proto.User, err error) {
 	span := opentracing.GlobalTracer().StartSpan("CreateUser")
 	defer span.Finish()
-	defer panick.RecoverFromPanic(opentracing.ContextWithSpan(ctx, span))
 	ext.SpanKindRPCServer.Set(span)
 	span.SetTag("time", time.Now())
 	span.LogFields(log.Object("request.body", req))
@@ -45,7 +43,6 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) 
 func (u *UserServiceServer) GetUsers(ctx context.Context, filter *proto.GetUsersFilter) (*proto.GetUsersResponse, error) {
 	span := opentracing.GlobalTracer().StartSpan("GetUsers")
 	defer span.Finish()
-	defer panick.RecoverFromPanic(opentracing.ContextWithSpan(ctx, span))
 	ext.SpanKindRPCServer.Set(span)
 	span.SetTag("time", time.Now())
 	span.SetTag("param.filter", filter)

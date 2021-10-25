@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -10,11 +11,11 @@ import (
 	"github.com/nats-io/nats.go"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
+	"github.com/uber/jaeger-client-go"
+	"github.com/uber/jaeger-client-go/config"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
 	servers "github.com/wisdommatt/ecommerce-microservice-user-service/grpc/service-servers"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/panick"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/tracer"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -38,11 +39,8 @@ func main() {
 	}
 	defer natsConn.Close()
 
-	serviceTracer := tracer.Init("user-service")
+	serviceTracer := initTracer("user-service")
 	opentracing.SetGlobalTracer(serviceTracer)
-	panicSpan := serviceTracer.StartSpan("user-service-panic")
-	defer panicSpan.Finish()
-	defer panick.RecoverFromPanic(opentracing.ContextWithSpan(context.Background(), panicSpan))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -53,7 +51,7 @@ func main() {
 		log.WithError(err).Fatal("TCP conn error")
 	}
 	mongoDBClient := mustConnectMongoDB(log)
-	userRepository := users.NewRepository(mongoDBClient)
+	userRepository := users.NewRepository(mongoDBClient, initTracer("mongodb"))
 	userService := services.NewUserService(userRepository, natsConn)
 
 	grpcServer := grpc.NewServer()
@@ -77,4 +75,23 @@ func mustLoadDotenv(log *logrus.Logger) {
 	if err != nil {
 		log.WithError(err).Fatal("Unable to load env files")
 	}
+}
+
+func initTracer(serviceName string) opentracing.Tracer {
+	return initJaegerTracer(serviceName)
+}
+
+func initJaegerTracer(serviceName string) opentracing.Tracer {
+	cfg := &config.Configuration{
+		ServiceName: serviceName,
+		Sampler: &config.SamplerConfig{
+			Type:  "const",
+			Param: 1,
+		},
+	}
+	tracer, _, err := cfg.NewTracer(config.Logger(jaeger.StdLogger))
+	if err != nil {
+		log.Fatal("ERROR: cannot init Jaeger", err)
+	}
+	return tracer
 }

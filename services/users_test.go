@@ -55,17 +55,6 @@ func TestUserService_CreateUser(t *testing.T) {
 			},
 		},
 		{
-			name: "empty password",
-			newUser: &users.User{
-				FullName: "John Doe",
-				Password: "",
-			},
-			repoGetUserByEmailFunc: func(ctx context.Context, email string) (*users.User, error) {
-				return nil, nil
-			},
-			wantErr: true,
-		},
-		{
 			name: "existing email",
 			newUser: &users.User{
 				Email: "hello@example.com",

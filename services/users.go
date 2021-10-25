@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/nats-io/nats.go"
@@ -9,8 +10,6 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/conversions"
-	"github.com/wisdommatt/ecommerce-microservice-user-service/pkg/password"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -23,6 +22,11 @@ type UserServiceImpl struct {
 	userRepo users.Repository
 	natsConn *nats.Conn
 }
+
+var (
+	ErrPaginationLimit = errors.New("pagination limit max is 100")
+	ErrTryAgain        = errors.New("an error occured, please try again later")
+)
 
 // NewUserService returns a new user service.
 func NewUserService(userRepo users.Repository, natsConn *nats.Conn) *UserServiceImpl {
@@ -52,10 +56,15 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, newUser *users.User) (
 		)
 		return nil, errors.New("user with this email already exist")
 	}
-	newUser.Password, err = password.HashPassword(ctx, newUser.Password, bcrypt.DefaultCost)
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
+	span.SetTag("bcrypt.passwordCost", bcrypt.DefaultCost)
 	if err != nil {
+		ext.Error.Set(span, true)
+		span.SetTag("param.passwordStr", newUser.Password)
+		span.LogFields(log.Error(err), log.String("event", "password hash error"))
 		return nil, ErrTryAgain
 	}
+	newUser.Password = string(passwordHash)
 	err = s.userRepo.CreateUser(ctx, newUser)
 	if err != nil {
 		return nil, ErrTryAgain
@@ -72,8 +81,14 @@ func (s *UserServiceImpl) publishCreateUserSendEmailEvent(span opentracing.Span,
 		"subject": "Welcome to my microservice application",
 		"body":    "It's glad to have you onboard, thanks for checking it out",
 	}
-	span.SetTag("nats.message", conversions.ToJSON(span, natsMessage))
-	err := s.natsConn.Publish("notification.SendEmail", []byte(conversions.ToJSON(span, natsMessage)))
+	natsMessageJSON, err := json.Marshal(natsMessage)
+	if err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.Error(err), log.Event("converting object to json"), log.Object("object", natsMessage))
+		return
+	}
+	span.SetTag("nats.message", string(natsMessageJSON))
+	err = s.natsConn.Publish("notification.SendEmail", natsMessageJSON)
 	if err != nil {
 		ext.Error.Set(span, true)
 		span.LogFields(log.Error(err), log.Event("nats.notification.SendEmail"))
