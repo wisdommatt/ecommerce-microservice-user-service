@@ -38,7 +38,6 @@ func (r *UserRepo) setMongoDBSpanComponentTags(span opentracing.Span, collection
 	ext.DBInstance.Set(span, collectionName)
 	ext.DBType.Set(span, "mongodb")
 	ext.SpanKindRPCClient.Set(span)
-	span.SetTag("time", time.Now())
 }
 
 func (r *UserRepo) toJSON(span opentracing.Span, obj interface{}) string {

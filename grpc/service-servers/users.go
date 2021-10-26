@@ -6,7 +6,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/opentracing/opentracing-go/log"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/services"
 )
@@ -28,8 +27,7 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) 
 	span := opentracing.GlobalTracer().StartSpan("CreateUser")
 	defer span.Finish()
 	ext.SpanKindRPCServer.Set(span)
-	span.SetTag("time", time.Now())
-	span.LogFields(log.Object("request.body", req))
+	span.SetTag("request.body", req)
 
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	newUser, err := u.userService.CreateUser(ctx, ProtoNewUserToInternalUser(req))
