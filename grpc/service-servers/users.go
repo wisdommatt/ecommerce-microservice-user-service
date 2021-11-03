@@ -2,7 +2,6 @@ package servers
 
 import (
 	"context"
-	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -24,7 +23,7 @@ func NewUserServiceServer(userService services.UserService) *UserServiceServer {
 
 // CreateUser is the grpc handler to create new user.
 func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) (res *proto.User, err error) {
-	span := opentracing.GlobalTracer().StartSpan("CreateUser")
+	span := opentracing.StartSpan("CreateUser")
 	defer span.Finish()
 	ext.SpanKindRPCServer.Set(span)
 	span.SetTag("request.body", req)
@@ -38,10 +37,9 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) 
 }
 
 func (u *UserServiceServer) GetUsers(ctx context.Context, filter *proto.GetUsersFilter) (*proto.GetUsersResponse, error) {
-	span := opentracing.GlobalTracer().StartSpan("GetUsers")
+	span := opentracing.StartSpan("GetUsers")
 	defer span.Finish()
 	ext.SpanKindRPCServer.Set(span)
-	span.SetTag("time", time.Now())
 	span.SetTag("param.filter", filter)
 
 	ctx = opentracing.ContextWithSpan(ctx, span)
@@ -55,5 +53,22 @@ func (u *UserServiceServer) GetUsers(ctx context.Context, filter *proto.GetUsers
 	}
 	return &proto.GetUsersResponse{
 		Users: protoUsers,
+	}, nil
+}
+
+func (u *UserServiceServer) LoginUser(ctx context.Context, input *proto.LoginInput) (*proto.LoginResponse, error) {
+	span := opentracing.StartSpan("LoginUser")
+	defer span.Finish()
+	ext.SpanKindRPCServer.Set(span)
+	span.SetTag("param.input", input)
+
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	usr, jwtToken, err := u.userService.LoginUser(ctx, input.Email, input.Password)
+	if err != nil {
+		return nil, err
+	}
+	return &proto.LoginResponse{
+		User:     InternalToProtoUser(usr),
+		JwtToken: jwtToken,
 	}, nil
 }

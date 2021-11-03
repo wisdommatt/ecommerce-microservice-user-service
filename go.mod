@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/joho/godotenv v1.4.0
 	github.com/nats-io/nats.go v1.13.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0

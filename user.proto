@@ -25,7 +25,18 @@ message GetUsersResponse {
     repeated User users = 1;
 }
 
+message LoginInput {
+    string email = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    User user = 1;
+    string jwtToken = 2;
+}
+
 service UserService {
     rpc CreateUser (NewUser) returns (User);
     rpc GetUsers (GetUsersFilter) returns (GetUsersResponse);
+    rpc LoginUser (LoginInput) returns (LoginResponse);
 }

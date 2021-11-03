@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/nats-io/nats.go"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -16,6 +19,7 @@ import (
 type UserService interface {
 	CreateUser(ctx context.Context, newUser *users.User) (*users.User, error)
 	GetUsers(ctx context.Context, afterId string, limit int32) ([]users.User, error)
+	LoginUser(ctx context.Context, email, password string) (*users.User, string, error)
 }
 
 type UserServiceImpl struct {
@@ -119,4 +123,49 @@ func (s *UserServiceImpl) GetUsers(ctx context.Context, afterId string, limit in
 		return nil, ErrTryAgain
 	}
 	return users, nil
+}
+
+func (s *UserServiceImpl) LoginUser(ctx context.Context, email, password string) (*users.User, string, error) {
+	span := opentracing.SpanFromContext(ctx)
+	if span == nil {
+		span = opentracing.StartSpan("service.LoginUser")
+	}
+	if email == "" || password == "" {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.String("error.object", "some field are empty"),
+			log.Event("input validation"),
+		)
+		return nil, "", errors.New("all fields are required")
+	}
+	user, err := s.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, "", errors.New("invalid credentials")
+	}
+	if user == nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.String("error.object", "user with email does not exist"))
+		return nil, "", errors.New("invalid credentials")
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.Error(err),
+			log.Event("password validation"),
+		)
+		return nil, "", errors.New("invalid credentials")
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"userId":    user.ID,
+		"timeAdded": user.TimeAdded,
+		"exp":       time.Now().AddDate(0, 0, 4).UTC().UnixNano(),
+	})
+	jwtToken, err := token.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
+	if err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.Error(err), log.Event("jwt generation"))
+		return nil, "", ErrTryAgain
+	}
+	return user, jwtToken, nil
 }
