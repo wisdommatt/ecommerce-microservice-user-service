@@ -35,8 +35,17 @@ message LoginResponse {
     string jwtToken = 2;
 }
 
+message GetUserFromJWTInput {
+    string jwtToken = 1;
+}
+
+message GetUserFromJWTResponse {
+    User user = 1;
+}
+
 service UserService {
     rpc CreateUser (NewUser) returns (User);
     rpc GetUsers (GetUsersFilter) returns (GetUsersResponse);
     rpc LoginUser (LoginInput) returns (LoginResponse);
+    rpc GetUserFromJWT(GetUserFromJWTInput) returns (GetUserFromJWTResponse);
 }

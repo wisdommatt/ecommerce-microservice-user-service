@@ -20,6 +20,7 @@ type UserService interface {
 	CreateUser(ctx context.Context, newUser *users.User) (*users.User, error)
 	GetUsers(ctx context.Context, afterId string, limit int32) ([]users.User, error)
 	LoginUser(ctx context.Context, email, password string) (*users.User, string, error)
+	GetUserFromJWT(ctx context.Context, jwtToken string) (*users.User, error)
 }
 
 type UserServiceImpl struct {
@@ -168,4 +169,38 @@ func (s *UserServiceImpl) LoginUser(ctx context.Context, email, password string)
 		return nil, "", ErrTryAgain
 	}
 	return user, jwtToken, nil
+}
+
+func (s *UserServiceImpl) GetUserFromJWT(ctx context.Context, jwtToken string) (*users.User, error) {
+	span := opentracing.SpanFromContext(ctx)
+	if span == nil {
+		span = opentracing.StartSpan("service.GetUserFromJWT")
+	}
+	token, err := jwt.Parse(jwtToken, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return "", errors.New("invalid jwt token string")
+		}
+		return []byte(os.Getenv("JWT_SECRET_KEY")), nil
+	})
+	if err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.Error(err), log.Event("jwt decoding"))
+		return nil, errors.New("invalid jwt")
+	}
+	if !token.Valid {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.Error(errors.New("invalid jwt token")),
+			log.Event("jwt token validation"),
+		)
+		return nil, errors.New("jwt token is not valid")
+	}
+	claims := token.Claims.(jwt.MapClaims)
+	userId := claims["userId"].(string)
+	span.SetTag("jwtClaims", claims)
+	user, err := s.userRepo.GetUserByID(ctx, userId)
+	if err != nil {
+		return nil, errors.New("user does not exist")
+	}
+	return user, nil
 }

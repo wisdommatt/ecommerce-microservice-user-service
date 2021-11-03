@@ -10,6 +10,7 @@ type RepositoryMock struct {
 	CreateUserFunc     func(ctx context.Context, user *users.User) error
 	GetUsersFunc       func(ctx context.Context, afterId string, limit int32) ([]users.User, error)
 	GetUserByEmailFunc func(ctx context.Context, email string) (*users.User, error)
+	GetUserByIDFunc    func(ctx context.Context, id string) (*users.User, error)
 }
 
 func (r *RepositoryMock) CreateUser(ctx context.Context, user *users.User) error {
@@ -22,4 +23,8 @@ func (r *RepositoryMock) GetUsers(ctx context.Context, afterId string, limit int
 
 func (r *RepositoryMock) GetUserByEmail(ctx context.Context, email string) (*users.User, error) {
 	return r.GetUserByEmailFunc(ctx, email)
+}
+
+func (r *RepositoryMock) GetUserByID(ctx context.Context, id string) (*users.User, error) {
+	return r.GetUserByIDFunc(ctx, id)
 }

@@ -18,6 +18,7 @@ type Repository interface {
 	CreateUser(ctx context.Context, user *User) error
 	GetUsers(ctx context.Context, afterId string, limit int32) ([]User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByID(ctx context.Context, id string) (*User, error)
 }
 
 type UserRepo struct {
@@ -109,6 +110,23 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*User, err
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	}
+	if err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.Error(err), log.Event("mongodb.FindOne"))
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *UserRepo) GetUserByID(ctx context.Context, id string) (*User, error) {
+	span := r.tracer.StartSpan("GetUserByID", opentracing.ChildOf(opentracing.SpanFromContext(ctx).Context()))
+	defer span.Finish()
+	r.setMongoDBSpanComponentTags(span, r.collection.Name())
+
+	filter := bson.M{"_id": id}
+	span.SetTag("param.id", id).SetTag("mongodb.filter", r.toJSON(span, filter))
+	var user User
+	err := r.collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		ext.Error.Set(span, true)
 		span.LogFields(log.Error(err), log.Event("mongodb.FindOne"))

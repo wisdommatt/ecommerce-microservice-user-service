@@ -72,3 +72,19 @@ func (u *UserServiceServer) LoginUser(ctx context.Context, input *proto.LoginInp
 		JwtToken: jwtToken,
 	}, nil
 }
+
+func (u *UserServiceServer) GetUserFromJWT(ctx context.Context, input *proto.GetUserFromJWTInput) (*proto.GetUserFromJWTResponse, error) {
+	span := opentracing.StartSpan("GetUserFromJWT")
+	defer span.Finish()
+	ext.SpanKindRPCServer.Set(span)
+	span.SetTag("param.input", input)
+
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	usr, err := u.userService.GetUserFromJWT(ctx, input.JwtToken)
+	if err != nil {
+		return nil, err
+	}
+	return &proto.GetUserFromJWTResponse{
+		User: InternalToProtoUser(usr),
+	}, nil
+}

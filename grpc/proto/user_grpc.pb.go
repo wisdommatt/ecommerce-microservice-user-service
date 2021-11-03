@@ -21,6 +21,7 @@ type UserServiceClient interface {
 	CreateUser(ctx context.Context, in *NewUser, opts ...grpc.CallOption) (*User, error)
 	GetUsers(ctx context.Context, in *GetUsersFilter, opts ...grpc.CallOption) (*GetUsersResponse, error)
 	LoginUser(ctx context.Context, in *LoginInput, opts ...grpc.CallOption) (*LoginResponse, error)
+	GetUserFromJWT(ctx context.Context, in *GetUserFromJWTInput, opts ...grpc.CallOption) (*GetUserFromJWTResponse, error)
 }
 
 type userServiceClient struct {
@@ -58,6 +59,15 @@ func (c *userServiceClient) LoginUser(ctx context.Context, in *LoginInput, opts 
 	return out, nil
 }
 
+func (c *userServiceClient) GetUserFromJWT(ctx context.Context, in *GetUserFromJWTInput, opts ...grpc.CallOption) (*GetUserFromJWTResponse, error) {
+	out := new(GetUserFromJWTResponse)
+	err := c.cc.Invoke(ctx, "/UserService/GetUserFromJWT", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility
@@ -65,6 +75,7 @@ type UserServiceServer interface {
 	CreateUser(context.Context, *NewUser) (*User, error)
 	GetUsers(context.Context, *GetUsersFilter) (*GetUsersResponse, error)
 	LoginUser(context.Context, *LoginInput) (*LoginResponse, error)
+	GetUserFromJWT(context.Context, *GetUserFromJWTInput) (*GetUserFromJWTResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -80,6 +91,9 @@ func (UnimplementedUserServiceServer) GetUsers(context.Context, *GetUsersFilter)
 }
 func (UnimplementedUserServiceServer) LoginUser(context.Context, *LoginInput) (*LoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginUser not implemented")
+}
+func (UnimplementedUserServiceServer) GetUserFromJWT(context.Context, *GetUserFromJWTInput) (*GetUserFromJWTResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserFromJWT not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 
@@ -148,6 +162,24 @@ func _UserService_LoginUser_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_GetUserFromJWT_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserFromJWTInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetUserFromJWT(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/UserService/GetUserFromJWT",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetUserFromJWT(ctx, req.(*GetUserFromJWTInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -166,6 +198,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginUser",
 			Handler:    _UserService_LoginUser_Handler,
+		},
+		{
+			MethodName: "GetUserFromJWT",
+			Handler:    _UserService_GetUserFromJWT_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
