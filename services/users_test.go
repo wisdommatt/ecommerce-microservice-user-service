@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/mocks"
-	userMocks "github.com/wisdommatt/ecommerce-microservice-user-service/test/mocks/users"
 )
 
 func TestUserService_CreateUser(t *testing.T) {
@@ -88,17 +87,21 @@ func TestUserService_CreateUser(t *testing.T) {
 }
 
 func TestUserServiceImpl_GetUsers(t *testing.T) {
-	userRepoMock := &userMocks.RepositoryMock{}
+	userRepo := &mocks.Repository{}
+	userRepo.On("GetUsers", mock.Anything, "", int32(100)).Return(nil, errors.New("an error occured"))
+	userRepo.On("GetUsers", mock.Anything, "valid", int32(2)).Return([]users.User{
+		{FullName: "John"}, {FullName: "Jane"}, {FullName: "Doe"},
+	}, nil)
+
 	type args struct {
 		afterId string
 		limit   int32
 	}
 	tests := []struct {
-		name             string
-		args             args
-		repoGetUsersFunc func(ctx context.Context, afterId string, limit int32) ([]users.User, error)
-		want             []users.User
-		wantErr          bool
+		name    string
+		args    args
+		want    []users.User
+		wantErr bool
 	}{
 		{
 			name:    "no pagination limit",
@@ -111,21 +114,13 @@ func TestUserServiceImpl_GetUsers(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "GetUsers repo implementation with error",
-			args: args{limit: 100},
-			repoGetUsersFunc: func(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
-				return nil, errors.New("DB connection error !")
-			},
+			name:    "GetUsers repo implementation with error",
+			args:    args{limit: 100},
 			wantErr: true,
 		},
 		{
 			name: "testcase with no expected error",
-			args: args{limit: 10},
-			repoGetUsersFunc: func(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
-				return []users.User{
-					{FullName: "John"}, {FullName: "Jane"}, {FullName: "Doe"},
-				}, nil
-			},
+			args: args{limit: 2, afterId: "valid"},
 			want: []users.User{
 				{FullName: "John"}, {FullName: "Jane"}, {FullName: "Doe"},
 			},
@@ -133,8 +128,7 @@ func TestUserServiceImpl_GetUsers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userRepoMock.GetUsersFunc = tt.repoGetUsersFunc
-			s := NewUserService(userRepoMock, nil)
+			s := NewUserService(userRepo, nil)
 			got, err := s.GetUsers(context.Background(), tt.args.afterId, tt.args.limit)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("User, nilServiceImpl.GetUsers() error = %v, wantErr %v", err, tt.wantErr)
