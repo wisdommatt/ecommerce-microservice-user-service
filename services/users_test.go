@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/mocks"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestUserService_CreateUser(t *testing.T) {
@@ -136,6 +137,86 @@ func TestUserServiceImpl_GetUsers(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("UserServiceImpl.GetUsers() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUserServiceImpl_LoginUser(t *testing.T) {
+	userHashedPassword, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.MinCost)
+
+	userRepo := &mocks.Repository{}
+	userRepo.On("GetUserByEmail", mock.Anything, "invalid@example.com").Return(nil, errors.New("an error occured"))
+	userRepo.On("GetUserByEmail", mock.Anything, "nil@example.com").Return(nil, nil)
+	userRepo.On("GetUserByEmail", mock.Anything, "valid@example.com").Return(&users.User{
+		ID:       "valid.user",
+		FullName: "Valid User",
+		Password: string(userHashedPassword),
+	}, nil)
+
+	type args struct {
+		email    string
+		password string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *users.User
+		wantErr bool
+	}{
+		{
+			name:    "empty email",
+			args:    args{email: "", password: "123456"},
+			wantErr: true,
+		},
+		{
+			name:    "empty password",
+			args:    args{email: "user@example.com", password: ""},
+			wantErr: true,
+		},
+		{
+			name:    "empty email and password",
+			args:    args{email: "", password: ""},
+			wantErr: true,
+		},
+		{
+			name:    "GetUserByEmail repo implementation with error",
+			args:    args{email: "invalid@example.com", password: "123456"},
+			wantErr: true,
+		},
+		{
+			name:    "GetUserByEmail repo implementation with nil user response",
+			args:    args{email: "nil@example.com", password: "123456"},
+			wantErr: true,
+		},
+		{
+			name:    "invalid password",
+			args:    args{email: "valid@example.com", password: "1234567"},
+			wantErr: true,
+		},
+		{
+			name: "valid credentials",
+			args: args{email: "valid@example.com", password: "123456"},
+			want: &users.User{
+				ID:       "valid.user",
+				FullName: "Valid User",
+				Password: string(userHashedPassword),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewUserService(userRepo, nil)
+			got, got1, err := s.LoginUser(context.Background(), tt.args.email, tt.args.password)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UserServiceImpl.LoginUser() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UserServiceImpl.LoginUser() got = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr && got1 == "" {
+				t.Errorf("UserServiceImpl.LoginUser() jwtToken = %v should not be empty", got1)
 			}
 		})
 	}
