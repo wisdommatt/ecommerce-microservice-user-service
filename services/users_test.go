@@ -221,3 +221,67 @@ func TestUserServiceImpl_LoginUser(t *testing.T) {
 		})
 	}
 }
+
+func TestUserServiceImpl_GetUserFromJWT(t *testing.T) {
+	userRepo := &mocks.Repository{}
+	userRepo.On("GetUserByID", mock.Anything, "user.invalid").Return(nil, errors.New("an error occured"))
+	userRepo.On("GetUserByID", mock.Anything, "user.valid").Return(&users.User{
+		ID:       "user.valid",
+		FullName: "Valid User",
+	}, nil)
+
+	type args struct {
+		jwtToken string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *users.User
+		wantErr bool
+	}{
+		{
+			name: "invalid jwt token",
+			args: args{
+				jwtToken: "invalidJwtToken",
+			},
+			wantErr: true,
+		},
+		{
+			name: "expired jwt token",
+			args: args{
+				jwtToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIyMDIxLTExLTA3VDEzOjM3OjA1LjM2OTgyODQ1KzAxOjAwIiwidXNlcklkIjoidXNlci5pbnZhbGlkIn0.R538RkECQiyoja9SqU37xYg78m1a0ONJgp2i-g_ZLMU",
+			},
+			wantErr: true,
+		},
+		{
+			name: "GetUserByID repo implementation with error",
+			args: args{
+				jwtToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLmludmFsaWQifQ.EJjgUmsONbvp9W-lfdmrSNsUy402LWEOgFgNiEobiXc",
+			},
+			wantErr: true,
+		},
+		{
+			name: "GetUserByID repo implementation without error",
+			args: args{
+				jwtToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLnZhbGlkIn0.s7PBgz9LPIpolroL8bH7NfR1u1b3UC8ra0cmooOPQ9I",
+			},
+			want: &users.User{
+				ID:       "user.valid",
+				FullName: "Valid User",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewUserService(userRepo, nil)
+			got, err := s.GetUserFromJWT(context.Background(), tt.args.jwtToken)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UserServiceImpl.GetUserFromJWT() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UserServiceImpl.GetUserFromJWT() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
