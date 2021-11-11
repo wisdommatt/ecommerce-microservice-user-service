@@ -131,3 +131,60 @@ func TestUserServiceServer_GetUsers(t *testing.T) {
 		})
 	}
 }
+
+func TestUserServiceServer_LoginUser(t *testing.T) {
+	userService := &mocks.UserService{}
+	userService.On("LoginUser", mock.Anything, "invalid@example.com", "123456").
+		Return(nil, "", errors.New("an error occured"))
+	userService.On("LoginUser", mock.Anything, "valid@example.com", "123456").
+		Return(&users.User{
+			ID:       "valid.user",
+			FullName: "Valid User",
+		}, "theJwtToken", nil)
+
+	type args struct {
+		input *proto.LoginInput
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *proto.LoginResponse
+		wantErr bool
+	}{
+		{
+			name: "LoginUser service implementation with error",
+			args: args{input: &proto.LoginInput{
+				Email:    "invalid@example.com",
+				Password: "123456",
+			}},
+			wantErr: true,
+		},
+		{
+			name: "LoginUser service implementation without error",
+			args: args{input: &proto.LoginInput{
+				Email:    "valid@example.com",
+				Password: "123456",
+			}},
+			want: &proto.LoginResponse{
+				User: &proto.User{
+					Id:       "valid.user",
+					FullName: "Valid User",
+				},
+				JwtToken: "theJwtToken",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := NewUserServiceServer(userService)
+			got, err := u.LoginUser(context.Background(), tt.args.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UserServiceServer.LoginUser() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UserServiceServer.LoginUser() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
