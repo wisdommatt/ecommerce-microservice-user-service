@@ -10,7 +10,6 @@ import (
 	"github.com/wisdommatt/ecommerce-microservice-user-service/grpc/proto"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/mocks"
-	userMocks "github.com/wisdommatt/ecommerce-microservice-user-service/test/mocks/users"
 )
 
 func TestUserServiceServer_CreateUser(t *testing.T) {
@@ -84,7 +83,13 @@ func TestUserServiceServer_CreateUser(t *testing.T) {
 }
 
 func TestUserServiceServer_GetUsers(t *testing.T) {
-	userServiceMock := &userMocks.ServiceMock{}
+	userService := &mocks.UserService{}
+	userService.On("GetUsers", mock.Anything, "invalid", int32(100)).Return(nil, errors.New("an error occured"))
+	userService.On("GetUsers", mock.Anything, "valid", int32(3)).Return([]users.User{
+		{FullName: "John"}, {FullName: "Jane"}, {FullName: "Doe"},
+	}, nil)
+	userService.On("GetUsers", mock.Anything, "empty", int32(0)).Return(nil, nil)
+
 	tests := []struct {
 		name                string
 		filter              *proto.GetUsersFilter
@@ -93,21 +98,13 @@ func TestUserServiceServer_GetUsers(t *testing.T) {
 		wantErr             bool
 	}{
 		{
-			name:   "GetUsers service implementation with error",
-			filter: &proto.GetUsersFilter{},
-			serviceGetUsersFunc: func(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
-				return nil, errors.New("Unknown error !")
-			},
+			name:    "GetUsers service implementation with error",
+			filter:  &proto.GetUsersFilter{AfterId: "invalid", Limit: 100},
 			wantErr: true,
 		},
 		{
 			name:   "GetUsers service implementation without error",
-			filter: &proto.GetUsersFilter{},
-			serviceGetUsersFunc: func(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
-				return []users.User{
-					{FullName: "John"}, {FullName: "Jane"}, {FullName: "Doe"},
-				}, nil
-			},
+			filter: &proto.GetUsersFilter{AfterId: "valid", Limit: 3},
 			want: &proto.GetUsersResponse{
 				Users: []*proto.User{
 					{FullName: "John"}, {FullName: "Jane"}, {FullName: "Doe"},
@@ -116,17 +113,13 @@ func TestUserServiceServer_GetUsers(t *testing.T) {
 		},
 		{
 			name:   "GetUsers service implementation with empty reponse",
-			filter: &proto.GetUsersFilter{},
-			serviceGetUsersFunc: func(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
-				return nil, nil
-			},
-			want: &proto.GetUsersResponse{Users: nil},
+			filter: &proto.GetUsersFilter{AfterId: "empty"},
+			want:   &proto.GetUsersResponse{Users: nil},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userServiceMock.GetUsersFunc = tt.serviceGetUsersFunc
-			u := NewUserServiceServer(userServiceMock)
+			u := NewUserServiceServer(userService)
 			got, err := u.GetUsers(context.Background(), tt.filter)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserServiceServer.GetUsers() error = %v, wantErr %v", err, tt.wantErr)
