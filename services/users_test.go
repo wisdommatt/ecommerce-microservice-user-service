@@ -6,81 +6,74 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
+	"github.com/wisdommatt/ecommerce-microservice-user-service/mocks"
 	userMocks "github.com/wisdommatt/ecommerce-microservice-user-service/test/mocks/users"
 )
 
 func TestUserService_CreateUser(t *testing.T) {
+	userRepo := &mocks.Repository{}
+	userRepo.On("CreateUser", mock.Anything, mock.AnythingOfType("*users.User")).Once().Return(nil).Run(func(args mock.Arguments) {
+		usr := args[1].(*users.User)
+		usr.Password = "hashedPassword"
+		usr.ID = "john.doe"
+	})
+	userRepo.On("CreateUser", mock.Anything, mock.AnythingOfType("*users.User")).Return(errors.New("invalid user"))
+	userRepo.On("GetUserByEmail", mock.Anything, "valid@example.com").Return(nil, nil)
+	userRepo.On("GetUserByEmail", mock.Anything, "existing@example.com").Return(&users.User{FullName: "User"}, nil)
+	userRepo.On("GetUserByEmail", mock.Anything, "error@example.com").Return(nil, errors.New("an error occured"))
+
 	tests := []struct {
-		name                   string
-		newUser                *users.User
-		want                   *users.User
-		repoCreateUserFunc     func(ctx context.Context, user *users.User) error
-		repoGetUserByEmailFunc func(ctx context.Context, email string) (*users.User, error)
-		wantErr                bool
+		name    string
+		newUser *users.User
+		want    *users.User
+		wantErr bool
 	}{
-		{
-			name: "CreateUser repository implementation with error",
-			newUser: &users.User{
-				FullName: "John Doe",
-				Country:  "Nigeria",
-				Password: "123456",
-			},
-			repoCreateUserFunc: func(ctx context.Context, user *users.User) error {
-				return errors.New("Invalid user entity !")
-			},
-			repoGetUserByEmailFunc: func(ctx context.Context, email string) (*users.User, error) {
-				return nil, nil
-			},
-			wantErr: true,
-		},
 		{
 			name: "CreateUser repository implementation without error",
 			newUser: &users.User{
 				FullName: "John Doe",
 				Country:  "Nigeria",
 				Password: "123456",
-			},
-			repoCreateUserFunc: func(ctx context.Context, user *users.User) error {
-				user.ID = "john.doe"
-				return nil
-			},
-			repoGetUserByEmailFunc: func(ctx context.Context, email string) (*users.User, error) {
-				return nil, nil
+				Email:    "valid@example.com",
 			},
 			want: &users.User{
 				ID:       "john.doe",
 				FullName: "John Doe",
 				Country:  "Nigeria",
+				Email:    "valid@example.com",
+				Password: "hashedPassword",
 			},
+		},
+		{
+			name: "CreateUser repository implementation with error",
+			newUser: &users.User{
+				FullName: "John Doe",
+				Country:  "Nigeria",
+				Password: "123456",
+				Email:    "valid@example.com",
+			},
+			wantErr: true,
 		},
 		{
 			name: "existing email",
 			newUser: &users.User{
-				Email: "hello@example.com",
-			},
-			repoGetUserByEmailFunc: func(ctx context.Context, email string) (*users.User, error) {
-				return &users.User{ID: "111222"}, nil
+				Email: "existing@example.com",
 			},
 			wantErr: true,
 		},
 		{
 			name: "GetUserByEmail repository implementation with error",
 			newUser: &users.User{
-				Email: "hello@example.com",
-			},
-			repoGetUserByEmailFunc: func(ctx context.Context, email string) (*users.User, error) {
-				return nil, errors.New("db disconnected")
+				Email: "error@example.com",
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewUserService(&userMocks.RepositoryMock{
-				CreateUserFunc:     tt.repoCreateUserFunc,
-				GetUserByEmailFunc: tt.repoGetUserByEmailFunc,
-			}, nil)
+			s := NewUserService(userRepo, nil)
 			got, err := s.CreateUser(context.Background(), tt.newUser)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserService.CreateUser() error = %v, wantErr %v", err, tt.wantErr)
