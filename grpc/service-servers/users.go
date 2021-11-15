@@ -23,7 +23,7 @@ func NewUserServiceServer(userService services.UserService) *UserServiceServer {
 
 // CreateUser is the grpc handler to create new user.
 func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) (res *proto.User, err error) {
-	span := opentracing.StartSpan("CreateUser")
+	span, _ := opentracing.StartSpanFromContext(ctx, "CreateUser")
 	defer span.Finish()
 	ext.SpanKindRPCServer.Set(span)
 	span.SetTag("request.body", req)
@@ -37,7 +37,7 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, req *proto.NewUser) 
 }
 
 func (u *UserServiceServer) GetUsers(ctx context.Context, filter *proto.GetUsersFilter) (*proto.GetUsersResponse, error) {
-	span := opentracing.StartSpan("GetUsers")
+	span, _ := opentracing.StartSpanFromContext(ctx, "GetUsers")
 	defer span.Finish()
 	ext.SpanKindRPCServer.Set(span)
 	span.SetTag("param.filter", filter)
@@ -57,7 +57,7 @@ func (u *UserServiceServer) GetUsers(ctx context.Context, filter *proto.GetUsers
 }
 
 func (u *UserServiceServer) LoginUser(ctx context.Context, input *proto.LoginInput) (*proto.LoginResponse, error) {
-	span := opentracing.StartSpan("LoginUser")
+	span, _ := opentracing.StartSpanFromContext(ctx, "LoginUser")
 	defer span.Finish()
 	ext.SpanKindRPCServer.Set(span)
 	span.SetTag("param.input", input)
@@ -74,7 +74,7 @@ func (u *UserServiceServer) LoginUser(ctx context.Context, input *proto.LoginInp
 }
 
 func (u *UserServiceServer) GetUserFromJWT(ctx context.Context, input *proto.GetUserFromJWTInput) (*proto.GetUserFromJWTResponse, error) {
-	span := opentracing.StartSpan("GetUserFromJWT")
+	span, _ := opentracing.StartSpanFromContext(ctx, "GetUserFromJWT")
 	defer span.Finish()
 	ext.SpanKindRPCServer.Set(span)
 	span.SetTag("param.input", input)

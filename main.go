@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go"
+	otgrpc "github.com/opentracing-contrib/go-grpc"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/uber/jaeger-client-go"
@@ -52,7 +53,10 @@ func main() {
 	userRepository := users.NewRepository(mongoDBClient, initTracer("mongodb"))
 	userService := services.NewUserService(userRepository, natsConn)
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(serviceTracer)),
+		grpc.StreamInterceptor(otgrpc.OpenTracingStreamServerInterceptor(serviceTracer)),
+	)
 	proto.RegisterUserServiceServer(grpcServer, servers.NewUserServiceServer(userService))
 	log.WithField("nats_uri", os.Getenv("NATS_URI")).Info("Server running on port: ", port)
 	grpcServer.Serve(lis)
