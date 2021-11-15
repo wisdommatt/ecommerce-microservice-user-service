@@ -53,14 +53,15 @@ func (r *UserRepo) toJSON(span opentracing.Span, obj interface{}) string {
 
 // CreateUser adds a new user to the database.
 func (r *UserRepo) CreateUser(ctx context.Context, newUser *User) error {
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.tracer, "CreateUser")
+	defer span.Finish()
+	r.setMongoDBSpanComponentTags(span, r.collection.Name())
+
 	newUser.ID = primitive.NewObjectID().Hex()
 	newUser.TimeAdded = time.Now()
 	newUser.LastUpdated = time.Now()
-	span := r.tracer.StartSpan("CreateUser", opentracing.ChildOf(opentracing.SpanFromContext(ctx).Context()))
-	defer span.Finish()
-
-	r.setMongoDBSpanComponentTags(span, r.collection.Name())
 	span.SetTag("param.newUser", r.toJSON(span, newUser))
+
 	_, err := r.collection.InsertOne(ctx, newUser)
 	if err != nil {
 		ext.Error.Set(span, true)
@@ -71,7 +72,7 @@ func (r *UserRepo) CreateUser(ctx context.Context, newUser *User) error {
 }
 
 func (r *UserRepo) GetUsers(ctx context.Context, afterId string, limit int32) ([]User, error) {
-	span := r.tracer.StartSpan("GetUsers", opentracing.ChildOf(opentracing.SpanFromContext(ctx).Context()))
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.tracer, "GetUsers")
 	defer span.Finish()
 	r.setMongoDBSpanComponentTags(span, r.collection.Name())
 
@@ -99,7 +100,7 @@ func (r *UserRepo) GetUsers(ctx context.Context, afterId string, limit int32) ([
 }
 
 func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	span := r.tracer.StartSpan("GetUserByEmail", opentracing.ChildOf(opentracing.SpanFromContext(ctx).Context()))
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.tracer, "GetUserByEmail")
 	defer span.Finish()
 	r.setMongoDBSpanComponentTags(span, r.collection.Name())
 
@@ -119,7 +120,7 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*User, err
 }
 
 func (r *UserRepo) GetUserByID(ctx context.Context, id string) (*User, error) {
-	span := r.tracer.StartSpan("GetUserByID", opentracing.ChildOf(opentracing.SpanFromContext(ctx).Context()))
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, r.tracer, "GetUserByID")
 	defer span.Finish()
 	r.setMongoDBSpanComponentTags(span, r.collection.Name())
 

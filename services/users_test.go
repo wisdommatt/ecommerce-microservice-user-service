@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/mock"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/internal/users"
 	"github.com/wisdommatt/ecommerce-microservice-user-service/mocks"
@@ -73,7 +74,7 @@ func TestUserService_CreateUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewUserService(userRepo, nil)
+			s := NewUserService(userRepo, &opentracing.NoopTracer{}, nil)
 			got, err := s.CreateUser(context.Background(), tt.newUser)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserService.CreateUser() error = %v, wantErr %v", err, tt.wantErr)
@@ -129,7 +130,7 @@ func TestUserServiceImpl_GetUsers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewUserService(userRepo, nil)
+			s := NewUserService(userRepo, &opentracing.NoopTracer{}, nil)
 			got, err := s.GetUsers(context.Background(), tt.args.afterId, tt.args.limit)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("User, nilServiceImpl.GetUsers() error = %v, wantErr %v", err, tt.wantErr)
@@ -206,7 +207,7 @@ func TestUserServiceImpl_LoginUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewUserService(userRepo, nil)
+			s := NewUserService(userRepo, &opentracing.NoopTracer{}, nil)
 			got, got1, err := s.LoginUser(context.Background(), tt.args.email, tt.args.password)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserServiceImpl.LoginUser() error = %v, wantErr %v", err, tt.wantErr)
@@ -273,7 +274,7 @@ func TestUserServiceImpl_GetUserFromJWT(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewUserService(userRepo, nil)
+			s := NewUserService(userRepo, &opentracing.NoopTracer{}, nil)
 			got, err := s.GetUserFromJWT(context.Background(), tt.args.jwtToken)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserServiceImpl.GetUserFromJWT() error = %v, wantErr %v", err, tt.wantErr)

@@ -26,6 +26,7 @@ type UserService interface {
 type UserServiceImpl struct {
 	userRepo users.Repository
 	natsConn *nats.Conn
+	tracer   opentracing.Tracer
 }
 
 var (
@@ -34,19 +35,19 @@ var (
 )
 
 // NewUserService returns a new user service.
-func NewUserService(userRepo users.Repository, natsConn *nats.Conn) *UserServiceImpl {
+func NewUserService(userRepo users.Repository, tracer opentracing.Tracer, natsConn *nats.Conn) *UserServiceImpl {
 	return &UserServiceImpl{
 		userRepo: userRepo,
 		natsConn: natsConn,
+		tracer:   tracer,
 	}
 }
 
 // CreateUser is the service handler to create new user.
 func (s *UserServiceImpl) CreateUser(ctx context.Context, newUser *users.User) (*users.User, error) {
-	span := opentracing.SpanFromContext(ctx)
-	if span == nil {
-		span = opentracing.StartSpan("service.GetUsers")
-	}
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "CreateUser")
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 	existingUser, err := s.userRepo.GetUserByEmail(ctx, newUser.Email)
 	if err != nil {
 		ext.Error.Set(span, true)
@@ -101,10 +102,9 @@ func (s *UserServiceImpl) publishCreateUserSendEmailEvent(span opentracing.Span,
 }
 
 func (s *UserServiceImpl) GetUsers(ctx context.Context, afterId string, limit int32) ([]users.User, error) {
-	span := opentracing.SpanFromContext(ctx)
-	if span == nil {
-		span = opentracing.StartSpan("service.GetUsers")
-	}
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "GetUsers")
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 	if limit == 0 {
 		ext.Error.Set(span, true)
 		span.LogFields(
@@ -127,10 +127,9 @@ func (s *UserServiceImpl) GetUsers(ctx context.Context, afterId string, limit in
 }
 
 func (s *UserServiceImpl) LoginUser(ctx context.Context, email, password string) (*users.User, string, error) {
-	span := opentracing.SpanFromContext(ctx)
-	if span == nil {
-		span = opentracing.StartSpan("service.LoginUser")
-	}
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "LoginUser")
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 	if email == "" || password == "" {
 		ext.Error.Set(span, true)
 		span.LogFields(
@@ -172,10 +171,9 @@ func (s *UserServiceImpl) LoginUser(ctx context.Context, email, password string)
 }
 
 func (s *UserServiceImpl) GetUserFromJWT(ctx context.Context, jwtToken string) (*users.User, error) {
-	span := opentracing.SpanFromContext(ctx)
-	if span == nil {
-		span = opentracing.StartSpan("service.GetUserFromJWT")
-	}
+	span, _ := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "GetUserFromJWT")
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 	token, err := jwt.Parse(jwtToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return "", errors.New("invalid jwt token string")

@@ -51,7 +51,7 @@ func main() {
 	}
 	mongoDBClient := mustConnectMongoDB(log)
 	userRepository := users.NewRepository(mongoDBClient, initTracer("mongodb"))
-	userService := services.NewUserService(userRepository, natsConn)
+	userService := services.NewUserService(userRepository, initTracer("user.ServiceHandler"), natsConn)
 
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(serviceTracer)),
