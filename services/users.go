@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/not.go"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
@@ -80,8 +81,20 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, newUser *users.User) (
 }
 
 func (s *UserServiceImpl) publishCreateUserSendEmailEvent(span opentracing.Span, user *users.User) {
-	span = opentracing.StartSpan("publish-create-user-email-event", opentracing.ChildOf(span.Context()))
+	span = s.tracer.StartSpan("publish-create-user-email-event", ext.SpanKindProducer, opentracing.ChildOf(span.Context()))
 	defer span.Finish()
+	ext.MessageBusDestination.Set(span, "notification.SendEmail")
+
+	var traceMsg not.TraceMsg
+	err := s.tracer.Inject(span.Context(), opentracing.Binary, &traceMsg)
+	if err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(
+			log.Error(err),
+			log.Event("injecting trace message to tracer"),
+		)
+		return
+	}
 	natsMessage := map[string]string{
 		"to":      user.Email,
 		"subject": "Welcome to my microservice application",
@@ -93,8 +106,10 @@ func (s *UserServiceImpl) publishCreateUserSendEmailEvent(span opentracing.Span,
 		span.LogFields(log.Error(err), log.Event("converting object to json"), log.Object("object", natsMessage))
 		return
 	}
-	span.SetTag("nats.message", string(natsMessageJSON))
-	err = s.natsConn.Publish("notification.SendEmail", natsMessageJSON)
+	traceMsg.Write(natsMessageJSON)
+	span.SetTag("nats.message", string(traceMsg.String()))
+
+	err = s.natsConn.Publish("notification.SendEmail", traceMsg.Bytes())
 	if err != nil {
 		ext.Error.Set(span, true)
 		span.LogFields(log.Error(err), log.Event("nats.notification.SendEmail"))
