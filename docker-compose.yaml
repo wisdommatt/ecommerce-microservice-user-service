@@ -12,6 +12,8 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
+    depends_on:
+      - mongodb
 
   mongodb:
     container_name: user-service-mongodb
