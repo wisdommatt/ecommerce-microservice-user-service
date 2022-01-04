@@ -1,4 +1,4 @@
-# Ecommerce User Microservice
+# Ecommerce User Service
 
 This is the GRPC user service that handles all activities in the ecommerce application that has to do with users (retrieve, update etc).
 
