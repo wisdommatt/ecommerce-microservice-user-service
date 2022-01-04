@@ -1,6 +1,6 @@
 # Ecommerce User Microservice
 
-This is the user microservice that handles all activities in the ecommerce microservice application that has to do with users (retrieve, update etc).
+This is the GRPC user service that handles all activities in the ecommerce application that has to do with users (retrieve, update etc).
 
 ## Applications
 
