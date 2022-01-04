@@ -10,10 +10,11 @@ This is the GRPC user service that handles all activities in the ecommerce appli
 * ## [Nats](https://nats.io)
 
   * NATS is **an open-source messaging system** (sometimes called message-oriented middleware).
-  * NATS is used in the user microservice for communicating with the notification service.
+  * NATS is used in the user service for communicating with the notification service when a new user is added.
 * ## [MongoDB](https://www.mongodb.com/)
 
   * MongoDB is an open source NoSQL database management program. NoSQL is used as an alternative to traditional relational databases.
+  * The user service stores users in MongoDB.
 
 ### Usage
 
